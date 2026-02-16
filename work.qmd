@@ -73,3 +73,42 @@ theme_set(theme_light())
 +----------+--------------------------------------------------------------------------------+
 
 # Fumbling around
+
+## Import
+
+```{r}
+trees <- 
+  read_delim("data/examdata.txt", 
+             delim = "\t",
+             escape_double = FALSE, 
+             trim_ws = TRUE,
+             col_types = "ffiddd"
+             )
+
+trees <- 
+  janitor::clean_names(trees)
+
+trees
+```
+
+## Visualize
+
+```{r}
+trees |> 
+  pivot_longer(height:volume,
+               names_to = "variable",
+               values_to = "value",
+               ) |> 
+  ggplot(aes(age_base,
+             value,
+             group = tree, 
+             color = location,
+             )) +
+  geom_point() +
+  geom_smooth(method = "loess",
+              se = FALSE,
+              )+
+  facet_wrap(~variable,
+             scales = "free",
+             )
+```
