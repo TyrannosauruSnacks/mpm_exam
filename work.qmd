@@ -1,0 +1,75 @@
+---
+title:       "Methods of Process Modelling"
+author:      "Max Arthur Hachemeister"
+date:        last-modified
+date-format: iso
+format:
+  gfm:
+    toc:     true
+---
+
+# Prerequisites
+
+```{r}
+#| label: setup
+#| results: false
+
+library(tidyverse)
+theme_set(theme_light())
+```
+
+# The task
+
+## Technical
+
+-   6 Pages Minimum
+
+## Content
+
+-   Compare the the observed growth of *Picea abies* of two different locations
+-   Select and fit appropriate forest growth models
+    -   Visualize the growth at both locations and compare
+-   Present the fitted models
+    -   With respect to their coefficients
+-   Select a suitable allometric model to calculate
+    -   Above-ground Biomass (average)
+    -   120 year old tree
+    -   For each location
+-   Reflect and describe *precisely* the reasons for selecting the allometric models
+    -   Range, sample size, coefficient of determination
+    -   Present the respective results
+-   Interpret and discuss the results with respect to the differences between the two locations
+    -   stand composition, climate conditions, elevation, etc.
+-   Create a document, following scientific writing principles
+
+## Remark
+
+> It is not necessary to document every processing step of the data and/or your script when working through the task. You may name and cite the respective software and/or packages.
+>
+> Concentrate on explaining and introducing the selected approach as well as most important settings, on the results, their presentation (tables, figures, etc.), and interpretation.
+>
+> Do not forget to give references and transparently note when you used further tools.
+
+# The data
+
+## Data dictionary
+
++----------+--------------------------------------------------------------------------------+
+| Variable | Description                                                                    |
++==========+================================================================================+
+| location | 1 = cold temperate climate, altitude \> 1000 m above sea level                 |
+|          |                                                                                |
+|          | 2 = temperate climate, altitude \< 1000 m above sea level (e.g. Harz, Germany) |
++----------+--------------------------------------------------------------------------------+
+| tree     | ID of observed *Picea abies* tree                                              |
++----------+--------------------------------------------------------------------------------+
+| age.base | **Age** of respective tree [years]                                             |
++----------+--------------------------------------------------------------------------------+
+| height   | Measured **stem height** of respective tree and age [m]                        |
++----------+--------------------------------------------------------------------------------+
+| dbh.cm   | Measured stem **diameter at breast height** [cm]                               |
++----------+--------------------------------------------------------------------------------+
+| volume   | calculated **stem volume** per tree and age [m³]                               |
++----------+--------------------------------------------------------------------------------+
+
+# Fumbling around
