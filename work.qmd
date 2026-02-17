@@ -15,6 +15,7 @@ format:
 #| results: false
 
 library(tidyverse)
+library(tidymodels)
 theme_set(theme_light())
 ```
 
@@ -54,23 +55,23 @@ theme_set(theme_light())
 
 ## Data dictionary
 
-+----------+--------------------------------------------------------------------------------+
-| Variable | Description                                                                    |
-+==========+================================================================================+
-| location | 1 = cold temperate climate, altitude \> 1000 m above sea level                 |
-|          |                                                                                |
-|          | 2 = temperate climate, altitude \< 1000 m above sea level (e.g. Harz, Germany) |
-+----------+--------------------------------------------------------------------------------+
-| tree     | ID of observed *Picea abies* tree                                              |
-+----------+--------------------------------------------------------------------------------+
-| age.base | **Age** of respective tree [years]                                             |
-+----------+--------------------------------------------------------------------------------+
-| height   | Measured **stem height** of respective tree and age [m]                        |
-+----------+--------------------------------------------------------------------------------+
-| dbh.cm   | Measured stem **diameter at breast height** [cm]                               |
-+----------+--------------------------------------------------------------------------------+
-| volume   | calculated **stem volume** per tree and age [m³]                               |
-+----------+--------------------------------------------------------------------------------+
++------------+--------------------------------------------------------------------------------+
+| Variable   | Description                                                                    |
++============+================================================================================+
+| location   | 1 = cold temperate climate, altitude \> 1000 m above sea level                 |
+|            |                                                                                |
+|            | 2 = temperate climate, altitude \< 1000 m above sea level (e.g. Harz, Germany) |
++------------+--------------------------------------------------------------------------------+
+| tree       | ID of observed *Picea abies* tree                                              |
++------------+--------------------------------------------------------------------------------+
+| age.base   | **Age** of respective tree \[years\]                                           |
++------------+--------------------------------------------------------------------------------+
+| height     | Measured **stem height** of respective tree and age \[m\]                      |
++------------+--------------------------------------------------------------------------------+
+| dbh.cm     | Measured stem **diameter at breast height** \[cm\]                             |
++------------+--------------------------------------------------------------------------------+
+| volume     | calculated **stem volume** per tree and age \[m³\]                             |
++------------+--------------------------------------------------------------------------------+
 
 # Fumbling around
 
@@ -86,29 +87,108 @@ trees <-
              )
 
 trees <- 
-  janitor::clean_names(trees)
+  janitor::clean_names(trees) |> 
+  rename(age = age_base)
 
 trees
 ```
+
+# Explore
+## Summary
+Always nice!
+
+```{r}
+
+trees |> 
+  summary()
+```
+
+There are more observations for location 7, however, the two trees at location 2 have the most respective observations, which in this case just means that they have been observed for the longest total time period. Let's check that:
+
+```{r}
+# Check the max age
+trees |> 
+  group_by(tree) |>
+  summarise(n = n(),
+            min_age = min(age),
+            max_age = max(age)
+            )
+```
+
+## Common tree height
+
+Good, all trees have been measured first with 20 years, and the minimal `max_age` is 80 let's compare the trees at that age:
+```{r}
+trees |> 
+  filter(age == 80)
+```
+Location seems to explain the most of the differences in the other variables, interesting.
+
+## Volume calculations
+
+Let's check how the volume got to be, because this was calculated, but the equation was not given in the data dictionary.
+
+Let's start with the basic forestry equation of $\frac{\pi}{4} d^2 \times h \times f$, with $f = 1/2$
+
+```{r}
+# make it a function
+eq_volume_forestry <- function(diameter, height, factor = 1/2){
+  pi/4 * diameter * height * factor
+}
+
+# calculate the volume
+trees |> 
+  mutate(
+    volume_test = round(eq_volume_forestry(dbh_cm, height), 2)
+    ) |> 
+  select(tree, volume, volume_test)
+```
+The original volume values seem quite high.
+Let's compare that visually:
+```{r}
+trees |> 
+  mutate(
+    volume_test = round(eq_volume_forestry(dbh_cm, height), 2)
+    ) |> 
+  pivot_longer(contains("volume")) |> 
+  ggplot(aes(age, value, color = location)) +
+  geom_point() + 
+  geom_smooth(aes(group = location),
+              method = "loess")+
+  facet_wrap(~ name) +
+  labs(
+    title = "Comparison of Different Volume Calculations",
+    subtitle = "Volume_test was calculated with the standard forestry equation.",
+    caption = "The results differ strongly.",
+    x = "Age",
+    y = NULL
+  ) +
+  scale_y_continuous(labels = scales::label_number(suffix = "m³")) +
+  scale_x_continuous(labels = scales::label_number(suffix = "y"))
+```
+Yep, that's quite a difference. I became sceptical of calculations I did not do in my own scripts.
+Let's consider for now, that the original `volume` values are unreliable.
 
 ## Visualize
 
 ```{r}
 trees |> 
-  pivot_longer(height:volume,
+  pivot_longer(height:dbh_cm,
                names_to = "variable",
-               values_to = "value",
+               values_to = "value"
                ) |> 
-  ggplot(aes(age_base,
+  ggplot(aes(age,
              value,
              group = tree, 
-             color = location,
-             )) +
+             color = location
+             )
+         ) +
   geom_point() +
-  geom_smooth(method = "loess",
-              se = FALSE,
+  geom_smooth(aes(group = location),
+              method = "loess",
+              se = TRUE
               )+
-  facet_wrap(~variable,
-             scales = "free",
+  facet_wrap(~ variable,
+             scales = "free"
              )
 ```
