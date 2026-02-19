@@ -3,9 +3,12 @@ title:       "Methods of Process Modelling"
 author:      "Max Arthur Hachemeister"
 date:        last-modified
 date-format: iso
+execute:
+  echo: false
 format:
   gfm:
     toc:     true
+bibliography: references.bib
 ---
 
 # Prerequisites
@@ -16,6 +19,7 @@ format:
 
 library(tidyverse)
 library(tidymodels)
+library(growthrates)
 theme_set(theme_light())
 ```
 
@@ -30,8 +34,8 @@ theme_set(theme_light())
 -   Compare the the observed growth of *Picea abies* of two different locations
 -   Select and fit appropriate forest growth models
     -   Visualize the growth at both locations and compare
--   Present the fitted models
-    -   With respect to their coefficients
+    -   Present the fitted models
+        -   With respect to their coefficients
 -   Select a suitable allometric model to calculate
     -   Above-ground Biomass (average)
     -   120 year old tree
@@ -58,9 +62,9 @@ theme_set(theme_light())
 +------------+--------------------------------------------------------------------------------+
 | Variable   | Description                                                                    |
 +============+================================================================================+
-| location   | 1 = cold temperate climate, altitude \> 1000 m above sea level                 |
+| location   | 2 = cold temperate climate, altitude \> 1000 m above sea level                 |
 |            |                                                                                |
-|            | 2 = temperate climate, altitude \< 1000 m above sea level (e.g. Harz, Germany) |
+|            | 7 = temperate climate, altitude \< 1000 m above sea level (e.g. Harz, Germany) |
 +------------+--------------------------------------------------------------------------------+
 | tree       | ID of observed *Picea abies* tree                                              |
 +------------+--------------------------------------------------------------------------------+
@@ -94,7 +98,9 @@ trees
 ```
 
 # Explore
+
 ## Summary
+
 Always nice!
 
 ```{r}
@@ -118,62 +124,119 @@ trees |>
 ## Common tree height
 
 Good, all trees have been measured first with 20 years, and the minimal `max_age` is 80 let's compare the trees at that age:
+
 ```{r}
 trees |> 
   filter(age == 80)
 ```
+
 Location seems to explain the most of the differences in the other variables, interesting.
 
 ## Volume calculations
 
 Let's check how the volume got to be, because this was calculated, but the equation was not given in the data dictionary.
 
-Let's start with the basic forestry equation of $\frac{\pi}{4} d^2 \times h \times f$, with $f = 1/2$
+Let's start with the basic forestry equation of $m^3 =\frac{\pi}{4} d^2 \cdot h \cdot f \cdot 0.001$, with $f = 0.5$
 
 ```{r}
 # make it a function
-eq_volume_forestry <- function(diameter, height, factor = 1/2){
-  pi/4 * diameter * height * factor
+volume_forestry <- function(diameter, height, factor = 0.5, digits = 3){
+  result <- 
+    (pi/4 * diameter^2) * height * factor * 1e-4
+  
+  
+  round(result, digits = digits)
 }
 
 # calculate the volume
 trees |> 
   mutate(
-    volume_test = round(eq_volume_forestry(dbh_cm, height), 2)
-    ) |> 
-  select(tree, volume, volume_test)
+    volume_test = volume_forestry(dbh_cm, height, .5)
+    )
 ```
-The original volume values seem quite high.
-Let's compare that visually:
+
+The original volume values seem quite high for cubic meters. Maybe it's cubic or centimeters, or decimeters?
+
+I guess it's decimeters, so adjusting the original volume values by 0.001:
+
 ```{r}
 trees |> 
   mutate(
-    volume_test = round(eq_volume_forestry(dbh_cm, height), 2)
+    volume_test = round(volume_forestry(dbh_cm, height), 2),
+    volume_cdm = volume * 1e-3
     ) |> 
-  pivot_longer(contains("volume")) |> 
+  pivot_longer(contains("volume_")) |> 
   ggplot(aes(age, value, color = location)) +
   geom_point() + 
-  geom_smooth(aes(group = location),
-              method = "loess")+
   facet_wrap(~ name) +
   labs(
     title = "Comparison of Different Volume Calculations",
     subtitle = "Volume_test was calculated with the standard forestry equation.",
-    caption = "The results differ strongly.",
+    # caption = "The results differ strongly.",
     x = "Age",
     y = NULL
   ) +
   scale_y_continuous(labels = scales::label_number(suffix = "m³")) +
   scale_x_continuous(labels = scales::label_number(suffix = "y"))
 ```
-Yep, that's quite a difference. I became sceptical of calculations I did not do in my own scripts.
-Let's consider for now, that the original `volume` values are unreliable.
+
+Yep, something like that, with a correction factor of 0.001. Still some difference! I became skeptical of calculations I did not do in my own scripts. Let's consider for now, that the original `volume` values might be right, but the actual equation is unknown so the values are unreliable.
+
+Basically it is not known which *volume* in particular was calculated. Ah, now that I look at the data dictionary it's the *stem volume*.
+
+The equation above is the standard for merchantable wood; i.e., every part of a tree where $d >= 7cm$. Let's try the $DENZIN$ [@kramer2008]equation and then move on.
+
+The equation is:
+
+$$
+V = 2(d^{2}/1000) \cdot (h - NH) \cdot Volumenkorrekturfaktor
+$$
+
+where:
+
+-   $d = \text{DBH, [cm]}$
+-   $h = \text{Total tree height, [m]}$
+-   $NH = \text{"Normalhöhe", aka. height of a standard tree}$
+-   $\text{Volumenkorrekturfaktor} = \text{Reduction factor}$
+
+```{r}
+volume_denzin_pine <- function(dbh_cm, height_m, formfactor = 0.03, standard_height_m = 28, digits = 2){
+  result <- 
+    (dbh_cm^2 / 1000) + (dbh_cm^2 / 1000) * (height_m - standard_height_m) * formfactor 
+  
+  round(result, digits = digits)
+}
+
+trees |> 
+  mutate(
+    volume_denzin = volume_denzin_pine(dbh_cm, height),
+    volume_forest = volume_forestry(dbh_cm, height),
+    volume_dcm = round(volume * 1e-3, 2)
+  )
+
+```
+
+Gotcha, maybe some rounding divergence. This seems odd though, because usually you are to round down to full centimeters, so `volume_dcm` should be less than my $DENZIN$, in which I didn't round down.
+
+Let's stick with $DENZIN$:
+
+```{r}
+trees <- 
+  trees |> 
+    mutate(volume = volume_denzin_pine(dbh_cm = dbh_cm,
+                                       height_m = height,
+                                       digits = 2
+                                       )
+           )
+```
 
 ## Visualize
 
+Let's compare the two locations visually. I let simple linear regressions be fitted for each location:
+
 ```{r}
 trees |> 
-  pivot_longer(height:dbh_cm,
+  pivot_longer(height:volume,
                names_to = "variable",
                values_to = "value"
                ) |> 
@@ -185,10 +248,342 @@ trees |>
          ) +
   geom_point() +
   geom_smooth(aes(group = location),
-              method = "loess",
+              method = "lm",
+              formula = y ~ x,
               se = TRUE
               )+
   facet_wrap(~ variable,
              scales = "free"
              )
 ```
+
+Okay, looks like the location is a rather significant predictor for the size in our data. Let's see how location and tree would be employed by a linear regression:
+
+```{r}
+lm(volume ~ location + tree, data = trees) |> 
+  summary() |> 
+  coef()
+```
+
+Yes, the both locations - `location 2` being the `intercept` - are strong predictors for the tree volume, according to the data we have; which is not much.
+
+# Forest Growth Models
+
+Since the locations affect the trees growth, the dataset is split to fit the models respectively.
+
+```{r}
+trees_l2 <- 
+  trees |> 
+  filter(location == 2)
+
+trees_l7 <- 
+  trees |> 
+  filter(location != 2)
+  
+```
+
+### Define Function and Parameters
+
+```{r}
+
+x_l2       <- trees_l2$age
+x_l7       <- trees_l7$age
+y0         <- .01
+mumax      <- .2
+beta       <- .2 # for richards
+
+parameters_l2 <- c(
+  y0 = y0,
+  mumax = mumax,
+  K = max(trees_l2$height),
+  beta = beta
+)
+
+parameters_l7 <- c(
+  y0 = y0,
+  mumax = mumax,
+  K = max(trees_l7$height),
+  beta = beta
+)
+
+
+y1_l2         <- grow_logistic(x_l2, parameters_l2) |> as_tibble(y)
+y2_l2         <- grow_gompertz(x_l2, parameters_l2) |> as_tibble(y)
+y3_l2         <- grow_richards(x_l2, parameters_l2) |> as_tibble(y)
+
+y1_l7         <- grow_logistic(x_l7, parameters_l7) |> as_tibble(y)
+y2_l7         <- grow_gompertz(x_l7, parameters_l7) |> as_tibble(y)
+y3_l7         <- grow_richards(x_l7, parameters_l7) |> as_tibble(y)
+
+
+```
+
+### Model calibration
+
+```{r}
+#| warning: false
+
+# Fit location 2
+fit1_l2 <- fit_growthmodel(grow_logistic,
+                        p = parameters_l2,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+fit2_l2 <- fit_growthmodel(grow_gompertz,
+                        p = parameters_l2,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+fit3_l2 <- fit_growthmodel(grow_richards,
+                        p = parameters_l2,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+# Fit location 7
+fit1_l7 <- fit_growthmodel(grow_logistic,
+                        p = parameters_l7,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+
+
+fit2_l7 <- fit_growthmodel(grow_gompertz,
+                        p = parameters_l7,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+
+fit3_l7 <- fit_growthmodel(grow_richards,
+                        p = parameters_l7,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+
+```
+
+### Check the results
+
+### Residuals
+
+#### Prepare rownames
+
+```{r}
+# Check residuals
+rownames <- c("logistic", "gompertz", "richards")
+
+```
+
+#### Squared Sum of Residuals
+
+```{r}
+residuals_l2 <- c(sum(fit1_l2@fit$residuals^2),
+                sum(fit2_l2@fit$residuals^2),
+                sum(fit3_l2@fit$residuals^2))
+
+residuals_l7 <- c(sum(fit1_l7@fit$residuals^2),
+                sum(fit2_l7@fit$residuals^2),
+                sum(fit3_l7@fit$residuals^2))
+
+residuals <- 
+  tibble(model = rownames,
+         l2 = residuals_l2,
+         l7= residuals_l7,
+         )
+
+residuals |> 
+arrange(l2, l7)
+
+```
+
+#### R Squared
+
+```{r}
+# Check rsquared
+rsquared_l2 <- c(fit1_l2@rsquared,
+                fit2_l2@rsquared, 
+                fit3_l2@rsquared)
+
+rsquared_l7 <- c(fit1_l7@rsquared,
+                fit2_l7@rsquared, 
+                fit3_l7@rsquared)
+
+rsquared <- 
+  bind_cols(list(
+       l2 = rsquared_l2,
+       l7 =rsquared_l7
+       )
+  ) |> 
+  mutate(model = rownames,
+         .before = 1)
+
+
+rsquared |> 
+  arrange(across(c(!model),desc))
+    
+```
+
+#### Predict new values and plot
+
+```{r}
+# predict values for each model
+res1_l2 <- as_tibble(predict(fit1_l2))
+res2_l2 <- as_tibble(predict(fit2_l2))
+res3_l2 <- as_tibble(predict(fit3_l2))
+
+res1_l7 <- as_tibble(predict(fit1_l7))
+res2_l7 <- as_tibble(predict(fit2_l7))
+res3_l7 <- as_tibble(predict(fit3_l7))
+
+model_results_list <- 
+  list(res1_l2, res2_l2, res3_l2, res1_l7, res2_l7, res3_l7)
+
+#combine
+model_results <- 
+bind_rows(model_results_list, .id = "id") |> 
+  mutate(
+    location = as_factor(
+      if_else(id <= 3, 2, 7)
+      ),
+    model = as_factor(
+      case_when(
+        id %in% c(1, 4)  ~ "logistic",
+        id %in% c(2, 5) ~ "gompertz",
+        TRUE ~ "richards"
+        )
+      )
+    )
+
+# plot
+model_results |> 
+  ggplot() +
+  geom_point(data = trees,
+             aes(age, height),
+             color = "grey") +
+  geom_line(aes(time, y, color = model),
+            linewidth = 2/3) +
+  facet_wrap(~location) +
+  scale_color_discrete(palette = "set2")
+```
+
+## Allometric models
+
+-   Select a suitable allometric model to calculate
+    -   Above-ground Biomass (average)
+    -   120 year old tree
+    -   For each location
+
+### Define the model and its parameters
+
+We're interested in the (average) Above Ground Biomass, and the date above has shown, that the locations are quite different, therefore the models should be diligently selected.
+
+What do we know:
+
+-   Species: Picea abies
+-   Location 7: Probably Germany
+-   Location 2: \>1000m above sea level, and cold temperate
+    -   according to the wikipedia for both: austria
+        -   but no AB model for that
+        -   Elevation, norway, sweden maybe, but climate bit too cold
+        -   Czec republic, fits both reasonably well.
+-   Diameter and Height ranges
+
+```{r}
+trees |> 
+  group_by(location) |> 
+  summarize(
+    min_diameter = min(dbh_cm),
+    max_diameter = max(dbh_cm),
+    min_height = min(height),
+    max_height = max(height)
+  )
+```
+
+Both Czech are probably the same sample just either with meter, or not, so take both:
+
+-   141
+-   142
+
+Germany, let's see:
+
+-   147
+    -   does not have the minimum range, but the max range is fine; also has the most samples, and the only R² mention
+
+Let's define the models and their standard parameter values:
+
+```{r}
+model_cz_141 <-
+  function(diameter, a = 0.57669 , b = 1.964){
+  
+    a * diameter^b
+  }
+
+model_cz_142 <- 
+  function(diameter, height, a = 0.11975, b = 0.81336){
+  
+    a * ((diameter^2) * height)^b
+  }
+
+model_de_147 <-
+  function(diameter, a = -43.13, b = 2.25, c = 0.452){
+  
+    a + b * diameter + c * diameter^2
+  }
+```
+
+And apply those models to the dataset:
+
+It should be noted that $AB = \text{Above Ground Biomass [kg]}$
+
+```{r}
+allometric_models <- 
+  list(
+    model_cz_141,
+    model_cz_142,
+    model_de_147
+  )
+
+trees_allometric <-  
+  trees |> 
+    mutate(
+      AB_141 = if_else(location == 2, model_cz_141(dbh_cm), NA),
+      AB_142 = if_else(location == 2, model_cz_142(dbh_cm, height), NA),
+      AB_147 = if_else(location == 7, model_de_147(dbh_cm, height), NA)
+    )
+
+trees_allometric |> 
+  group_by(location, age) |> 
+  summarize(
+    across(contains("AB"), mean),
+    .groups = "drop"
+  ) |> 
+  filter(age == 120)
+```
+
+### Plot it also, maybe:
+
+```{r}
+
+allometric_pivot <- 
+  trees_allometric |> 
+    pivot_longer(cols = contains("AB"),
+                 names_to = "model",
+                 values_to = "AB") |> 
+  filter(!is.na(AB))
+  
+allometric_pivot |> 
+  ggplot(aes(age, AB, color = model)) +
+  geom_point(color = "grey") +
+  geom_point(data = allometric_pivot |>  filter(age == 120),
+             shape = 1,
+             size = 2,
+             stroke = 1) +
+  ggrepel::geom_text_repel(data = allometric_pivot |> filter(age == 120),
+            aes(age, AB, label = paste(round(AB, 2), "kg")),
+            nudge_x = - 60,
+            direction = "y"
+            # nudge_y = -300
+            ) +
+  facet_wrap(~location) +
+  scale_color_discrete(palette = "set2")
+```
+
+### TODO Maybe model the one missing tree with his 120 years.
+
+Just maybe
