@@ -200,30 +200,41 @@ where:
 -   $\text{Volumenkorrekturfaktor} = \text{Reduction factor}$
 
 ```{r}
-volume_denzin_pine <- function(dbh_cm, height_m, formfactor = 0.03, standard_height_m = 28, digits = 2){
+volume_denzin_spruce <- function(dbh_cm, height_m, formfactor = 0.04, digits = 2){
   result <- 
-    (dbh_cm^2 / 1000) + (dbh_cm^2 / 1000) * (height_m - standard_height_m) * formfactor 
+    (dbh_cm^2 / 1000) + (dbh_cm^2 / 1000) * (height_m - (19 + 2 * (dbh_cm * .1))) * formfactor 
   
   round(result, digits = digits)
 }
 
 trees |> 
   mutate(
-    volume_denzin = volume_denzin_pine(dbh_cm, height),
+    volume_denzin = volume_denzin_spruce(dbh_cm, height),
     volume_forest = volume_forestry(dbh_cm, height),
     volume_dcm = round(volume * 1e-3, 2)
-  )
+  ) |> 
+  select(1:2, 7:9)
+```
+
+Gotcha, maybe some rounding divergence. Ahja I didn't round down to full centimeters. Let's do that and see:
+
+```{r}
+trees |> 
+  mutate(
+    volume_denzin = volume_denzin_spruce(floor(dbh_cm), height),
+    volume_forest = volume_forestry(dbh_cm, height),
+    volume_dcm = round(volume * 1e-3, 2)
+  ) |> 
+  select(1:2, 7:9)
 
 ```
 
-Gotcha, maybe some rounding divergence. This seems odd though, because usually you are to round down to full centimeters, so `volume_dcm` should be less than my $DENZIN$, in which I didn't round down.
-
-Let's stick with $DENZIN$:
+Still a little off, so let's stick with $DENZIN$ and rounding down, so that I at least know how the values got to be:
 
 ```{r}
 trees <- 
   trees |> 
-    mutate(volume = volume_denzin_pine(dbh_cm = dbh_cm,
+    mutate(volume = volume_denzin_spruce(dbh_cm = floor(dbh_cm),
                                        height_m = height,
                                        digits = 2
                                        )
@@ -269,7 +280,7 @@ Yes, the both locations - `location 2` being the `intercept` - are strong predic
 
 # Forest Growth Models
 
-Since the locations affect the trees growth, the dataset is split to fit the models respectively.
+Since the locations affect the trees growth, the data set is split to fit the models respectively.
 
 ```{r}
 trees_l2 <- 
@@ -295,14 +306,14 @@ beta       <- .2 # for richards
 parameters_l2 <- c(
   y0 = y0,
   mumax = mumax,
-  K = max(trees_l2$height),
+  K = max(trees$height),
   beta = beta
 )
 
 parameters_l7 <- c(
   y0 = y0,
   mumax = mumax,
-  K = max(trees_l7$height),
+  K = max(trees$height),
   beta = beta
 )
 
@@ -314,8 +325,6 @@ y3_l2         <- grow_richards(x_l2, parameters_l2) |> as_tibble(y)
 y1_l7         <- grow_logistic(x_l7, parameters_l7) |> as_tibble(y)
 y2_l7         <- grow_gompertz(x_l7, parameters_l7) |> as_tibble(y)
 y3_l7         <- grow_richards(x_l7, parameters_l7) |> as_tibble(y)
-
-
 ```
 
 ### Model calibration
@@ -356,6 +365,41 @@ fit3_l7 <- fit_growthmodel(grow_richards,
                         time = trees_l7$age,
                         y = trees_l7$height)
 
+trees_rename <- 
+trees |> 
+  rename(
+    time = age,
+    value = height
+  )
+
+trees_logistic <- 
+  all_growthmodels(
+    value ~ grow_logistic(time, parms) | location,
+    data = trees_rename,
+    p = parameters_l2
+  )
+
+trees_gompertz <-
+  all_growthmodels(
+    value ~ grow_gompertz(time, parms) | location,
+    data = trees_rename,
+    p = parameters_l2
+  )
+
+trees_richards <- 
+    all_growthmodels(
+    value ~ grow_richards(time, parms) | location,
+    data = trees_rename,
+    p = parameters_l2
+  )
+
+
+
+map(list(trees_gompertz, trees_logistic), \(x) deviance(x))
+
+list_c(predict(trees_gompertz)) |> as_tibble() |> 
+  select(height_gompertz = 2)
+                                   
 ```
 
 ### Check the results
@@ -389,6 +433,8 @@ residuals <-
 
 residuals |> 
 arrange(l2, l7)
+
+deviance(fit1_l2)
 
 ```
 
@@ -586,4 +632,29 @@ allometric_pivot |>
 
 ### TODO Maybe model the one missing tree with his 120 years.
 
-Just maybe
+Not all trees have been measured at 120 years. We can use the growth models we fit to predict those values though:
+
+Ah, no we can't yet because the models were fit for height only. So I would nee to fit another model for diameter.
+
+```{r}
+fit3_l2_diameter <- fit_growthmodel(grow_richards,
+                        p = parameters_l2,
+                        time = trees_l2$age,
+                        y = trees_l2$dbh_cm)
+
+tidy_model_info(x = fit3_l2_diameter)
+  
+
+
+tidy_model_info <- function(x) {
+  
+  model_name <- deparse(substitute(x))
+  
+  tibble(
+    model = model_name,
+    residuals_sqsum = rsquared(x),
+    r_squared = sum(residuals(x)^2)
+  )
+  
+}
+```

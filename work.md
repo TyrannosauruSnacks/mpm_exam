@@ -1,6 +1,6 @@
 # Methods of Process Modelling
 Max Arthur Hachemeister
-2026-02-19
+2026-02-20
 
 - [Prerequisites](#prerequisites)
 - [The task](#the-task)
@@ -288,46 +288,60 @@ where:
 
 <!-- -->
 
-    # A tibble: 68 × 9
-       location tree    age height dbh_cm volume volume_denzin volume_forest
-       <fct>    <fct> <int>  <dbl>  <dbl>  <dbl>         <dbl>         <dbl>
-     1 2        1        20    4.8    6.6     11          0.01         0.008
-     2 2        1        30    9.5   15.6     80          0.11         0.091
-     3 2        1        40   14.2   22.3    240          0.29         0.277
-     4 2        1        50   18.8   28.3    505          0.58         0.591
-     5 2        1        60   23.1   32.2    805          0.88         0.941
-     6 2        1        70   26.2   34.6   1079          1.13         1.23 
-     7 2        1        80   28.2   36.5   1335          1.34         1.48 
-     8 2        1        90   30.2   37.8   1538          1.52         1.70 
-     9 2        1       100   32.2   39.4   1761          1.75         1.96 
-    10 2        1       110   33.5   41     1988          1.96         2.21 
+    # A tibble: 68 × 5
+       location tree  volume_denzin volume_forest volume_dcm
+       <fct>    <fct>         <dbl>         <dbl>      <dbl>
+     1 2        1              0.02         0.008       0.01
+     2 2        1              0.12         0.091       0.08
+     3 2        1              0.31         0.277       0.24
+     4 2        1              0.61         0.591       0.5 
+     5 2        1              0.94         0.941       0.8 
+     6 2        1              1.21         1.23        1.08
+     7 2        1              1.43         1.48        1.33
+     8 2        1              1.64         1.70        1.54
+     9 2        1              1.88         1.96        1.76
+    10 2        1              2.1          2.21        1.99
     # ℹ 58 more rows
-    # ℹ 1 more variable: volume_dcm <dbl>
 
-Gotcha, maybe some rounding divergence. This seems odd though, because
-usually you are to round down to full centimeters, so `volume_dcm`
-should be less than my $DENZIN$, in which I didn’t round down.
+Gotcha, maybe some rounding divergence. Ahja I didn’t round down to full
+centimeters. Let’s do that and see:
 
-Let’s stick with $DENZIN$:
+    # A tibble: 68 × 5
+       location tree  volume_denzin volume_forest volume_dcm
+       <fct>    <fct>         <dbl>         <dbl>      <dbl>
+     1 2        1              0.01         0.008       0.01
+     2 2        1              0.11         0.091       0.08
+     3 2        1              0.31         0.277       0.24
+     4 2        1              0.6          0.591       0.5 
+     5 2        1              0.93         0.941       0.8 
+     6 2        1              1.17         1.23        1.08
+     7 2        1              1.4          1.48        1.33
+     8 2        1              1.58         1.70        1.54
+     9 2        1              1.85         1.96        1.76
+    10 2        1              2.1          2.21        1.99
+    # ℹ 58 more rows
+
+Still a little off, so let’s stick with $DENZIN$ and rounding down, so
+that I at least know how the values got to be:
 
 ## Visualize
 
 Let’s compare the two locations visually. I let simple linear
 regressions be fitted for each location:
 
-![](work_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](work_files/figure-commonmark/unnamed-chunk-10-1.png)
 
 Okay, looks like the location is a rather significant predictor for the
 size in our data. Let’s see how location and tree would be employed by a
 linear regression:
 
                    Estimate Std. Error    t value     Pr(>|t|)
-    (Intercept)  1.37285714  0.1621150  8.4684152 6.112884e-12
-    location7   -1.06467532  0.2443976 -4.3563255 5.057756e-05
-    tree2       -0.04142857  0.2292652 -0.1807015 8.571913e-01
-    tree11      -0.21103896  0.2932771 -0.7195890 4.744819e-01
-    tree13      -0.14727273  0.2586461 -0.5693987 5.711429e-01
-    tree14      -0.10909091  0.2586461 -0.4217768 6.746468e-01
+    (Intercept)  1.44500000  0.1717641  8.4127028 7.630190e-12
+    location7   -1.12681818  0.2589441 -4.3515891 5.142084e-05
+    tree2       -0.03642857  0.2429111 -0.1499667 8.812777e-01
+    tree11      -0.21389610  0.3107329 -0.6883601 4.937937e-01
+    tree13      -0.14454545  0.2740406 -0.5274599 5.997568e-01
+    tree14      -0.10818182  0.2740406 -0.3947656 6.943707e-01
 
 Yes, the both locations - `location 2` being the `intercept` - are
 strong predictors for the tree volume, according to the data we have;
@@ -335,12 +349,35 @@ which is not much.
 
 # Forest Growth Models
 
-Since the locations affect the trees growth, the dataset is split to fit
-the models respectively.
+Since the locations affect the trees growth, the data set is split to
+fit the models respectively.
 
 ### Define Function and Parameters
 
 ### Model calibration
+
+    [[1]]
+            2         7 
+     850.0154 6312.8900 
+
+    [[2]]
+           2        7 
+    29.42745 63.91110 
+
+    # A tibble: 68 × 1
+       height_gompertz
+                 <dbl>
+     1           0.165
+     2           8.20 
+     3          22.8  
+     4          29.8  
+     5          32.0  
+     6          32.6  
+     7          32.8  
+     8          32.8  
+     9          32.8  
+    10          32.8  
+    # ℹ 58 more rows
 
 ### Check the results
 
@@ -351,11 +388,13 @@ the models respectively.
 #### Squared Sum of Residuals
 
     # A tibble: 3 × 3
-      model        l2    l7
-      <chr>     <dbl> <dbl>
-    1 richards   9.47  56.0
-    2 logistic  29.4   63.9
-    3 gompertz 850.   337. 
+      model        l2     l7
+      <chr>     <dbl>  <dbl>
+    1 richards   9.47   56.0
+    2 logistic  29.4    63.9
+    3 gompertz 850.   6313. 
+
+    [1] 29.42745
 
 #### R Squared
 
@@ -364,11 +403,11 @@ the models respectively.
       <chr>    <dbl> <dbl>
     1 richards 0.997 0.941
     2 logistic 0.990 0.933
-    3 gompertz 0.742 0.675
+    3 gompertz 0.742 0    
 
 #### Predict new values and plot
 
-![](work_files/figure-commonmark/unnamed-chunk-17-1.png)
+![](work_files/figure-commonmark/unnamed-chunk-18-1.png)
 
 ## Allometric models
 
@@ -428,11 +467,1031 @@ It should be noted that $AB = \text{Above Ground Biomass [kg]}$
 
 ### Plot it also, maybe:
 
-![](work_files/figure-commonmark/unnamed-chunk-21-1.png)
+![](work_files/figure-commonmark/unnamed-chunk-22-1.png)
 
 ### TODO Maybe model the one missing tree with his 120 years.
 
-Just maybe
+Not all trees have been measured at 120 years. We can use the growth
+models we fit to predict those values though:
+
+Ah, no we can’t yet because the models were fit for height only. So I
+would nee to fit another model for diameter.
+
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+    Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm):
+    collapsing to unique 'x' values
+
+    # A tibble: 1 × 3
+      model            residuals_sqsum r_squared
+      <chr>                      <dbl>     <dbl>
+    1 fit3_l2_diameter           0.980      72.0
 
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
