@@ -1,20 +1,560 @@
 ---
-title: "report"
-author: Max Arthur Hachemeister
-date: last-modified
-format: 
+title:       "Methods of Process Modelling"
+author:      "Max Arthur Hachemeister"
+date:        last-modified
+date-format: iso
+
+mainfont: DejaVu Sans
+fontsize: 12pt
+# fig-width: 7.230951
+fig-asp: .5625
+fig-align: center
+number-sections: true
+section-numbering: 1.1.1
+
+execute:
+  echo: false
+  
+format:
   typst:
-    toc: true
-    number-sections: true
-    section-numbering: "1.1"
-bibliography: bibliography.bib
-biblio-style: "chicago-shortened-notes"
+    toc: false
+    papersize: a4
+    margin:
+      x: 2.5cm
+      bottom: 2cm
+    bibliographystyle: "chicago-author-date"
+    keep-typ: true
+  gfm:
+    toc:     true
+
+bibliography: references.bib
 ---
+
+```{r}
+#| label: setup
+#| output: false
+
+library(tidyverse)
+library(tidymodels)
+library(growthrates)
+
+theme_set(theme_light())
+update_theme(text = element_text(size   = 13,
+                                 family = "DejaVu Sans"))
+```
+
+```{r}
+#| label: import
+#| output: false
+
+
+trees <- 
+  read_delim("data/examdata.txt", 
+             delim = "\t",
+             escape_double = FALSE, 
+             trim_ws = TRUE,
+             col_types = "ffiddd"
+             )
+
+trees <- 
+  janitor::clean_names(trees) |> 
+  rename(age = age_base)
+
+# Recalculate volume with DENZIN equation
+
+## Define function
+volume_denzin_spruce <- function(dbh_cm, height_m, formfactor = 0.04, digits = 2){
+  
+  # round down
+  dbh_cm <- floor(dbh_cm) 
+  
+  # calculate
+  result <- 
+    (dbh_cm^2 / 1000) + (dbh_cm^2 / 1000) * (height_m - (19 + 2 * (dbh_cm * .1))) * formfactor 
+  
+  # round to sensible digits
+  round(result, digits = digits)
+}
+
+## Replace original volume values
+trees <-
+  trees |>
+  mutate(volume = volume_denzin_spruce(dbh_cm = dbh_cm,
+                                       height_m = height))
+
+n_observations <- 
+  nrow(trees)
+
+n_trees <- 
+  nrow(distinct(trees, tree))
+       
+n_locations <- 
+  nrow(distinct(trees, location))
+```
 
 # Introduction
 
+Statistical models are invaluable tools for deriving and predicting variables relevant to applied and scientific forest ecology alike. These models not only help scale the time and space dimensions of forest ecosystem to scopes comprehensible by humans, and allow therefore to virtually test and evaluate forest management approaches, and also anticipate relevant developments like climate change, so to effectively inform land managers in a timely manner [@pretzsch2009, ch. 1 11].
+
+However, diligence is due when models are to be selected and applied to a given question or an actual tree stand, as there are many models for a wide range of applications, with varying quality, to choose from. It takes both statistical understanding and domain knowledge to find and apply models appropriately.
+
+In the following, the procedure of model selection, fitting, and interpretation is elaborated for a exemplary tree data. The data and model selection are described, and afterwards the fit of the selected models is presented, discussed, and concluded upon.
+
 # Material and Methods
+
+## Initial Data
+
+The initial data set consisted of `{r} n_observations` total observations, from `{r} n_trees` individual *Picea abies* (Norway Spruce) trees, and for `{r} n_locations` different locations, with the given variables:
+
+-   Diameter at breast height (DBH) \[cm\]
+-   Tree height \[m\]
+-   Volume \[m³\]
+-   Age \[years\]
+-   Location
+
+Volume was not observed but calculated, while for the locations, climate and elevation above sea level were described in the meta data, see @sec-allometric-models.
+
+## Software
+
+The data was processed with the programming language R [@rcoreteam2022], RStudio [@positteam2025], and the *tidyverse* meta package [@wickham2019], while the grwoth models were selected from and fit with the *growthrates* package [@petzoldt2025], see also @sec-appendix
+
+## Tree Volume Calculation
+
+As the tree volume was calculated but no equation given, and the values seeming unlikely high for the unit of cubic meters, the volume was calculated again with the *DENZIN* equation for volume of a tree [@kramer2008; @rast2026], given as:
+
+$$
+\text{V} = 2(d^{2}/1000) \cdot (h - NH) \cdot \text{Formfactor}
+$$
+
+where:
+
+-   $V = \text{Merchantable wood volume, i.e. stem wood and branches <= 7cm}$
+-   $NH = \text{"Normal height"} = \text{Expected average tree height}$
+-   $d = \text{DBH [cm], rounded down}$
+-   $h = \text{Tree height [m]}$
+
+and specifically for *Picea abies:*
+
+-   $\text{Formfactor} = 0.04$
+-   $NH = 19 + 2(\text{DBH}/10)$
+
+## Relevant Strata {#sec-location}
+
+After initial data exploration, major differences in overall productivity of trees for each location became apparent (@fig-locations).
+
+For further verification, a linear regression model with *volume* as outcome, and *location* as well as *tree* as predictor variables was fit to the data.
+
+```{r}
+#| label: fig-locations
+#| fig-cap: "Observed Growth Curves and Fitted Linear Regressions of Structural Tree Variables"
+
+facet_names <- 
+  c(
+    dbh_cm = "DBH [cm]",
+    height = "Tree Height [m]",
+    volume = "Volume [m³]"
+    )
+
+
+trees |> 
+  pivot_longer(height:volume,
+               names_to = "variable",
+               values_to = "value"
+               ) |> 
+  ggplot(aes(age,
+             value,
+             group = tree, 
+             color = location
+             )
+         ) +
+  geom_point() +
+  geom_smooth(aes(group = location),
+              method = "lm",
+              formula = y ~ x,
+              se = TRUE
+              )+
+  facet_wrap(~ variable,
+             scales = "free",
+             labeller = labeller(
+               variable = facet_names)
+             ) +
+  labs(x = "Tree Age [y]",
+       y = NULL,
+       color = "Location",
+       ) +
+  scale_color_discrete(palette = "set2")
+```
+
+@tbl-location-siginifcance shows the estimated regression coefficients of the predictor variables with their respective p-values; where lower values represent a higher significance of a variable for the model's estimation. Location 2 and 7 both having the most effective estimates as well as being the most significant predictors; meaning, *location* explains most of the differences in the trees' volumes.
+
+Therefore, all subsequent models were fit and evaluated individually for each location.
+
+```{r}
+#| label: tbl-location-siginifcance
+#| tbl-cap: "Regression Coefficients and P-Values of a Linear Regression Model for Tree Volume"
+
+
+lm(volume ~ location + tree, data = trees) |> 
+  summary() |>
+  tidy() |> 
+  select(-statistic, -std.error) |> 
+  mutate(term = if_else(term == "(Intercept)", "location2", term)) |> 
+  janitor::clean_names(case = "title") |> 
+  knitr::kable(digits = 3)
+```
+
+## Growth Models {#sec-growth-models}
+
+Generally in nature, growth follows a sigmoid, also saturation, curve; that is, the curve begins with a flat incline which gradually increases to the steepest point, after which the curve's incline decreases asymptotically towards the maximum.
+
+These curves are expressed with mathematical functions, like *Logistic Regression*, *Gompertz*, or *Richards*. The process of *fitting* functions to data means: to find those function parameters with which the resulting curve estimates the observed data most accurately; where this process is generally executed by computers.
+
+To guide the model fitting computations, so called *measures*, or *criterions*, are calculated and utilized. Two common of these measures are; the *Coefficient of Determination* ($R^{2}$), which expresses how strong the values estimated by the model correlate with those observed; and the *Residual Sum of Squares* ($RSS$), expressing how much the estimated values deviate from the observed ones overall.
+
+Furthermore, these measures can be used to compare different models, so as to select the most applicable among them. Accordingly, @fig-growth-curves shows the curves for tree height of three different logistic regression models fitted to this project's data; the respective coefficients being be discussed further in @sec-results-growth.
+
+```{r}
+#| label: fit-models
+#| warning: false
+
+# Split into location
+trees_l2 <- 
+  trees |> 
+  filter(location == 2)
+
+trees_l7 <- 
+  trees |> 
+  filter(location != 2)
+
+# Set model parameters
+y0         <- .01
+mumax      <- .2
+beta       <- .2 # for richards
+
+params <- c(
+  y0 = y0,
+  mumax = mumax,
+  K = max(trees$height),
+  beta = beta
+)
+
+# Fit models
+
+## Fit location 2
+log_l2 <- fit_growthmodel(grow_logistic,
+                        p = params,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+gomp_l2 <- fit_growthmodel(grow_gompertz,
+                        p = params,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+rich_l2 <- fit_growthmodel(grow_richards,
+                        p = params,
+                        time = trees_l2$age,
+                        y = trees_l2$height)
+
+## Fit location 7
+log_l7 <- fit_growthmodel(grow_logistic,
+                        p = params,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+
+
+gomp_l7 <- fit_growthmodel(grow_gompertz,
+                        p = params,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+
+rich_l7 <- fit_growthmodel(grow_richards,
+                        p = params,
+                        time = trees_l7$age,
+                        y = trees_l7$height)
+```
+
+```{r}
+#| label: model-predict
+
+
+# predict values for each model
+res_log_l2 <- as_tibble(predict(log_l2))
+res_gomp_l2 <- as_tibble(predict(gomp_l2))
+res_rich_l2 <- as_tibble(predict(rich_l2))
+
+res_log_l7 <- as_tibble(predict(log_l7))
+res_gomp_l7 <- as_tibble(predict(gomp_l7))
+res_rich_l7 <- as_tibble(predict(rich_l7))
+
+res_list <- 
+  list(res_log_l2, res_gomp_l2, res_rich_l2,
+       res_log_l7, res_gomp_l7, res_rich_l7
+  )
+
+#combine
+model_results <- 
+bind_rows(res_list, .id = "id") |> 
+  mutate(
+    location = as_factor(
+      if_else(id <= 3, 2, 7)
+      ),
+    model = as_factor(
+      case_when(
+        id %in% c(1, 4)  ~ "logistic",
+        id %in% c(2, 5) ~ "gompertz",
+        TRUE ~ "richards"
+        )
+      )
+    )
+```
+
+```{r}
+#| label: fig-growth-curves
+#| fig-cap: "Comparison of Estimated Tree Height from Different Models and Observed Datapoints"
+
+
+# plot
+label_location <- function(string){
+  str_c("Location\ ", (string))
+}
+
+model_results |> 
+  mutate(model = str_to_title(model)) |> 
+  ggplot() +
+  geom_point(data = trees,
+             aes(age, height),
+             color = "grey",
+             alpha = .5) +
+  geom_line(aes(time, y, color = model),
+            linewidth = 1) +
+  facet_wrap(~location,
+             labeller = labeller(location = label_location
+             )) +
+  labs(
+    x = "Tree Age [y]",
+    y = "Tree Height [m]",
+    color = "Model",
+  ) +
+  # scale_y_continuous(labels = scales::label_number(suffix = "m")) +
+  # scale_x_continuous(labels = scales::label_number(suffix = "y")) +
+  scale_color_discrete(palette = "set2")
+
+```
+
+## Allometric Models {#sec-allometric-models}
+
+Allometric models are used to derive the values of variables that are impractical to measure, from their relationship with those variables whose mensuration is more easy. For example, to measure the total above ground biomass (AB) of a tree, the tree is usually cut down and separated into compartments for convenient measurement on the ground. If however, one were to study the total AB of a whole tree stand, even a reasonably sized sample of trees would in many cases be unfeasible; economically for the forest owner, and effort-wise for the scientist. It is possible, though, to derive a tree's AB from variables like standing height and DBH with acceptable accuracy, which can both be measured from ground level with the tree being left intact.
+
+Yet the parameters of those models still need to be estimated from representative empirical samples, which remain cost- and labor-intense studies at any rate. For this reason many models have been derived that only areapplicable to certain geographic areas or ranges of input variables, and might also have a small overall sample -- an extensive overview of such models was compiled and published by @zianis2005. It is therefore crucial to diligently select an allometric model so that it is applicable to the conditions of the sample to be estimated. In that regard, @tbl-sample-ranges gives the values ranges for this project's data.
+
+```{r}
+#| label: tbl-sample-ranges
+#| tbl-cap: "Value Ranges of the Sample's Variables"
+trees |> 
+  group_by(location) |> 
+  summarize(
+    DBH_min = min(dbh_cm),
+    DBH_max = max(dbh_cm),
+    height_min = min(height),
+    height_max = max(height)
+  ) |>
+  janitor::clean_names(case = "title", abbreviations = "DBH") |> 
+  knitr::kable(digits = 2)
+```
+
+The models to be applied were accordingly selected by region, range, sample size, and $R^2$; in ascending order of relevance. This order came to be because; firstly, @sec-location has shown the location to be most predictive for the structural tree variables; secondly, while a substantial sample size might hint towards a reliable model, if the trees sampled were within a small band of value ranges, such a model will probably be even more unreliable beyond these ranges than another model in the range of interest but with a smaller sample size would be; and lastly, the model choice in the given case, and after regarding all previous points, was so reduced that $R^2$ frankly wasn't a choice anymore.
+
+In conclusion, the following models for AB were selected from those given in the aforementioned publication:
+
+-   Location 2
+    -   Model 141: $AB = 0.57669 \cdot \text{DBH}^{1.964}$
+    -   Model 142: $AB = 0.11975 \cdot (\text{DBH}^2 \cdot \text{Height})^{0.81336}$
+-   Location 7
+    -   Model 147: $AB = -43.13 + 2.25 \cdot \text{DBH} + 0.452 \cdot \text{DBH}^2$
+
+As location 2 was described to have a *cold temperate* climate and an elevation of 1000 meters above sea level; Norway, Austria, and the Czech Republic were of interest according to geographical data [@wikipedia2025; @wikipedia2026]. However, no AB models existed for Austria, and – even though having an average of 1000 meters above sea level – most parts of Norway have higher elevations and colder climate; so the two models from the Czech Republic with the appropriate ranges of values were selected.
+
+Conversely, location 7 was described to be in Central Germany; in which case selecting for the most applicable range of values coincidentally resulted in that German model with also the largest sample size and the only $R^2$ given.
 
 # Results
 
-# Discussion
+## Model Fit {#sec-results-growth}
+
+@tbl-rsquares shows the logistic regression models mentioned in @sec-growth-models ranked according to the aforementioned measures of fitness.
+
+It should be noted, that values up to 1, for $R^2$; and lower values generally, for $\text{RSS}$, express a better model fit respectively. Therefore the *Richards* function shows the best fit of the three models, while the *Gompertz* function could not be sensibly fit for location 7, but scores low overall regardless.
+
+```{r}
+#| label: tbl-rsquares
+#| warning: false
+#| tbl-cap: "Comparison of Growth Models by Measures of Fitness"
+#| tbl-subcap: 
+#|   - "R²"
+#|   - "RSS"
+#| layout-ncol: 2
+# Check rsquared
+rsquared_l2 <- c(rsquared(log_l2),
+                rsquared(gomp_l2), 
+                rsquared(rich_l2) 
+                )
+
+rsquared_l7 <- c(rsquared(log_l7),
+                rsquared(gomp_l7), 
+                rsquared(rich_l7) 
+                )
+
+rownames <- 
+  c("Logistic", "Gompertz", "Richards")
+
+rsquared <- 
+  bind_cols(list(
+       location_2 = rsquared_l2,
+       location_7 = rsquared_l7
+       )
+  ) |> 
+  mutate(model = rownames,
+         .before = 1)
+
+
+rsquared |> 
+  arrange(across(c(!model),desc)) |> 
+  janitor::clean_names(case = "title") |> 
+  knitr::kable(digits = 2)
+
+# check Squared Sum of Residuals
+
+residuals_l2 <- 
+  c(sum(residuals(log_l2)^2),
+    sum(residuals(gomp_l2)^2),
+    sum(residuals(rich_l2)^2)
+  )
+                
+residuals_l7 <- 
+  c(sum(residuals(log_l7)^2),
+    sum(residuals(gomp_l7)^2),
+    sum(residuals(rich_l7)^2)
+  )
+                
+
+residuals <- 
+  bind_cols(list(
+       location_2 = residuals_l2,
+       location_7 = residuals_l7
+       )
+  ) |> 
+  mutate(model = rownames,
+         .before = 1)
+
+
+residuals |> 
+  arrange(across(c(!model))) |> 
+  janitor::clean_names(case = "title") |> 
+  knitr::kable(digits = 2)
+```
+
+## Above Ground Biomass
+
+```{r}
+#| label: allometric-models
+model_cz_141 <-
+  function(diameter, a = 0.57669 , b = 1.964){
+     a * diameter^b
+  }
+
+model_cz_142 <- 
+  function(diameter, height, a = 0.11975, b = 0.81336){
+     a * ((diameter^2) * height)^b
+  }
+
+model_de_147 <-
+  function(diameter, a = -43.13, b = 2.25, c = 0.452){
+     a + b * diameter + c * diameter^2
+  }
+
+trees_allometric <-  
+  trees |> 
+    mutate(
+      AB_141 = if_else(location == 2, model_cz_141(dbh_cm), NA),
+      AB_142 = if_else(location == 2, model_cz_142(dbh_cm, height), NA),
+      AB_147 = if_else(location == 7, model_de_147(dbh_cm, height), NA)
+    )
+```
+
+@fig-allometric-model shows the derived AB for all the trees, with exact values shown for those trees remaining at year 120 (tree 11 having only been recorded until age 80). The resulting growth curves -- as made up by the grey points -- reflect the overall trend of the originally observed variables, and also echo the respective difference for each location.
+
+```{r}
+#| label: fig-allometric-model
+#| fig-cap: "Above Ground Biomass (AB) as Derived from Allometric Models" 
+
+# Prep data
+allometric_pivot <- 
+  trees_allometric |> 
+    pivot_longer(cols = contains("AB"),
+                 names_to = "model",
+                 values_to = "AB") |> 
+  mutate(model = str_remove(model, "AB_")) |> 
+  filter(!is.na(AB))
+  
+# Plot
+allometric_pivot |> 
+  ggplot(aes(age, AB, color = model)) +
+  geom_point(color = "grey",
+             alpha = .5) +
+  geom_point(data = allometric_pivot |>  filter(age == 120),
+             shape = 1,
+             size = 2,
+             stroke = 1) +
+  ggrepel::geom_text_repel(data = allometric_pivot |> filter(age == 120),
+            aes(age, AB, label = paste(round(AB, 2), "kg")),
+            nudge_x = - 60,
+            direction = "y",
+            show.legend = FALSE,
+            # nudge_y = -300
+            ) +
+  facet_wrap(~location,
+             labeller = labeller(location = label_location)) +
+  labs(x = "Tree Age [y]",
+       y = "AB [kg]",
+       color = "Model",
+       ) +
+  scale_color_discrete(palette = "set2")
+```
+
+# Conclusion
+
+This report has shown how model selection and application are accompanied by a range of considerations; from relevant statistic contexts like measures of fitness, to empirical domain knowledge like reasonable values for structural tree attributes under varying climate conditions.
+
+While the exemplary data presented easy to discern differences and inaccuracies in that regard, real world data will be more opaque, requiring special attention and insights of the data scientists concerned.
+
+It is easy to forget that models are just estimations of an unobserved reality, and therefore never truly accurate. So it is upon the scientist to choose and apply the models with scrutiny to make effective as well as efficient use of them and convey the results to practicioners.
+
+
+# Appendix {#sec-appendix .unnumbered} 
+
+```{r}
+#| label: tbl-mean120
+#| tbl-cap: "Mean Estimated Above Ground Biomass [kg] for a Tree 120 Years of Age"
+
+# Get mean for each location
+trees_allometric |>
+  filter(age == 120) |> 
+  group_by(Location = location) |> 
+  summarise(across(contains("AB"), mean)) |> 
+  pivot_longer(contains("AB"),
+               values_to = "Mean AB \\[kg\\]",
+               names_to = "Model",
+               values_drop_na = TRUE
+                ) |> 
+  mutate(Model = str_remove(Model, "AB_")) |> 
+  knitr::kable(digits = 2)
+```
+
+Session Info
+```{r}
+#| output: true
+
+sessioninfo::package_info(c("tidyverse", "growthrates", "tidymodels", "quarto",
+                            "knitr"),
+                          dependencies = FALSE)
+```
