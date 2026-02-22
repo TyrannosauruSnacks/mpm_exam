@@ -6,7 +6,7 @@ date-format: iso
 
 mainfont: DejaVu Sans
 fontsize: 12pt
-# fig-width: 7.230951
+fig-width: 7.230951
 fig-asp: .5625
 fig-align: center
 number-sections: true

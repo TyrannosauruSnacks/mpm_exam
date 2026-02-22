@@ -20,7 +20,10 @@ bibliography: references.bib
 library(tidyverse)
 library(tidymodels)
 library(growthrates)
+
 theme_set(theme_light())
+update_theme(text = element_text(size   = 12,
+                                 family = "DejaVu Sans"))
 ```
 
 # The task
@@ -93,8 +96,6 @@ trees <-
 trees <- 
   janitor::clean_names(trees) |> 
   rename(age = age_base)
-
-trees
 ```
 
 # Explore
@@ -177,7 +178,8 @@ trees |>
     y = NULL
   ) +
   scale_y_continuous(labels = scales::label_number(suffix = "m³")) +
-  scale_x_continuous(labels = scales::label_number(suffix = "y"))
+  scale_x_continuous(labels = scales::label_number(suffix = "y")) +
+  scale_color_discrete(palette = "set2")
 ```
 
 Yep, something like that, with a correction factor of 0.001. Still some difference! I became skeptical of calculations I did not do in my own scripts. Let's consider for now, that the original `volume` values might be right, but the actual equation is unknown so the values are unreliable.
@@ -265,7 +267,8 @@ trees |>
               )+
   facet_wrap(~ variable,
              scales = "free"
-             )
+             ) +
+  scale_color_discrete(palette = "set2")
 ```
 
 Okay, looks like the location is a rather significant predictor for the size in our data. Let's see how location and tree would be employed by a linear regression:
@@ -364,41 +367,6 @@ fit3_l7 <- fit_growthmodel(grow_richards,
                         p = parameters_l7,
                         time = trees_l7$age,
                         y = trees_l7$height)
-
-trees_rename <- 
-trees |> 
-  rename(
-    time = age,
-    value = height
-  )
-
-trees_logistic <- 
-  all_growthmodels(
-    value ~ grow_logistic(time, parms) | location,
-    data = trees_rename,
-    p = parameters_l2
-  )
-
-trees_gompertz <-
-  all_growthmodels(
-    value ~ grow_gompertz(time, parms) | location,
-    data = trees_rename,
-    p = parameters_l2
-  )
-
-trees_richards <- 
-    all_growthmodels(
-    value ~ grow_richards(time, parms) | location,
-    data = trees_rename,
-    p = parameters_l2
-  )
-
-
-
-map(list(trees_gompertz, trees_logistic), \(x) deviance(x))
-
-list_c(predict(trees_gompertz)) |> as_tibble() |> 
-  select(height_gompertz = 2)
                                    
 ```
 
@@ -433,8 +401,6 @@ residuals <-
 
 residuals |> 
 arrange(l2, l7)
-
-deviance(fit1_l2)
 
 ```
 
@@ -655,8 +621,4 @@ tidy_model_info <- function(x) {
 }
 
 tidy_model_info(x = fit3_l2_diameter)
-  
-
-
-
 ```

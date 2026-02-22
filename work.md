@@ -1,6 +1,6 @@
 # Methods of Process Modelling
 Max Arthur Hachemeister
-2026-02-20
+2026-02-22
 
 - [Prerequisites](#prerequisites)
 - [The task](#the-task)
@@ -159,21 +159,6 @@ level</p>
 # Fumbling around
 
 ## Import
-
-    # A tibble: 68 × 6
-       location tree    age height dbh_cm volume
-       <fct>    <fct> <int>  <dbl>  <dbl>  <dbl>
-     1 2        1        20    4.8    6.6     11
-     2 2        1        30    9.5   15.6     80
-     3 2        1        40   14.2   22.3    240
-     4 2        1        50   18.8   28.3    505
-     5 2        1        60   23.1   32.2    805
-     6 2        1        70   26.2   34.6   1079
-     7 2        1        80   28.2   36.5   1335
-     8 2        1        90   30.2   37.8   1538
-     9 2        1       100   32.2   39.4   1761
-    10 2        1       110   33.5   41     1988
-    # ℹ 58 more rows
 
 # Explore
 
@@ -356,29 +341,6 @@ fit the models respectively.
 
 ### Model calibration
 
-    [[1]]
-            2         7 
-     850.0154 6312.8900 
-
-    [[2]]
-           2        7 
-    29.42745 63.91110 
-
-    # A tibble: 68 × 1
-       height_gompertz
-                 <dbl>
-     1           0.165
-     2           8.20 
-     3          22.8  
-     4          29.8  
-     5          32.0  
-     6          32.6  
-     7          32.8  
-     8          32.8  
-     9          32.8  
-    10          32.8  
-    # ℹ 58 more rows
-
 ### Check the results
 
 ### Residuals
@@ -393,8 +355,6 @@ fit the models respectively.
     1 richards   9.47   56.0
     2 logistic  29.4    63.9
     3 gompertz 850.   6313. 
-
-    [1] 29.42745
 
 #### R Squared
 
